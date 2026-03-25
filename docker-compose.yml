@@ -3,19 +3,19 @@ version: '3'
 services:
 
   staging:
-    image: my-app
+    image: vyshnavipriya/ci-cd-node:latest
     container_name: staging-app
     ports:
       - "3000:3000"
 
   blue:
-    image: my-app
+    image: vyshnavipriya/ci-cd-node:latest
     container_name: blue-app
     ports:
       - "3001:3000"
 
   green:
-    image: my-app
+    image: vyshnavipriya/ci-cd-node:latest
     container_name: green-app
     ports:
       - "3002:3000"
