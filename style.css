@@ -2,22 +2,23 @@ body {
   margin: 0;
   font-family: Arial, sans-serif;
   background: #eef2f3;
-  color: #333;
-  text-align: center;
+  color: #2f3e46;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 header {
-  background: #2f3e46;
-  color: #fff;
+  background: #354f52;
+  color: #ffffff;
   padding: 20px;
-}
-
-header h1 {
-  margin: 0;
+  text-align: center;
 }
 
 .container {
+  flex: 1;
   padding: 30px;
+  text-align: center;
 }
 
 .flowchart {
@@ -28,18 +29,22 @@ header h1 {
   margin: 20px 0;
 }
 
+.flowchart.vertical {
+  flex-direction: column;
+}
+
 .box {
   background: #cad2c5;
   padding: 15px 20px;
   border-radius: 10px;
   margin: 10px;
-  min-width: 150px;
+  min-width: 180px;
   font-weight: bold;
 }
 
 .arrow {
-  font-size: 20px;
-  margin: 0 10px;
+  font-size: 18px;
+  margin: 5px;
 }
 
 .status {
@@ -64,9 +69,15 @@ header h1 {
   background: #b7e4c7;
 }
 
+.info {
+  max-width: 600px;
+  margin: auto;
+  text-align: left;
+}
+
 footer {
-  margin-top: 30px;
+  background: #354f52;
+  color: #ffffff;
+  text-align: center;
   padding: 10px;
-  background: #2f3e46;
-  color: white;
 }

@@ -9,37 +9,74 @@
 
   <header>
     <h1>DevOps CI/CD Pipeline</h1>
-    <p>Automated Build • Test • Deploy</p>
+    <p>Automated Build, Test, Containerization and Deployment</p>
   </header>
 
-  <section class="container">
-    
-    <h2>🚀 Pipeline Flow</h2>
+  <main class="container">
+
+    <h2>CI/CD Pipeline Flow</h2>
 
     <div class="flowchart">
       <div class="box">Code Push<br>(GitHub)</div>
       <div class="arrow">→</div>
 
-      <div class="box">Build & Test<br>(CI)</div>
+      <div class="box">Build & Test<br>(Node.js + Jest)</div>
       <div class="arrow">→</div>
 
       <div class="box">Docker Build<br>& Push</div>
       <div class="arrow">→</div>
 
-      <div class="box">Deploy<br>(Blue-Green)</div>
+      <div class="box">Staging<br>(Docker Compose)</div>
+      <div class="arrow">→</div>
+
+      <div class="box">Production<br>(Manual Approval)</div>
     </div>
 
-    <h2>🌍 Deployment Status</h2>
+    <h2>Blue-Green Deployment Flow</h2>
+
+    <div class="flowchart vertical">
+      <div class="box">Current Live Environment<br>BLUE</div>
+      <div class="arrow">↓</div>
+
+      <div class="box">Deploy New Version to<br>GREEN</div>
+      <div class="arrow">↓</div>
+
+      <div class="box">Testing & Validation<br>on GREEN</div>
+      <div class="arrow">↓</div>
+
+      <div class="box">Switch Traffic<br>BLUE → GREEN</div>
+      <div class="arrow">↓</div>
+
+      <div class="box">GREEN becomes Production</div>
+      <div class="arrow">↓</div>
+
+      <div class="box">BLUE becomes Standby</div>
+    </div>
+
+    <h2>Why Switching is Required</h2>
+
+    <div class="info">
+      <p>Switching between environments ensures zero downtime during deployments. 
+      The new version is deployed and tested in an inactive environment before redirecting user traffic.</p>
+
+      <ul>
+        <li>No service interruption during deployment</li>
+        <li>Easy rollback to previous stable version</li>
+        <li>Safer production releases</li>
+      </ul>
+    </div>
+
+    <h2>Environment Status</h2>
 
     <div class="status">
-      <div class="env blue">BLUE ENV<br><span>Running</span></div>
-      <div class="env green">GREEN ENV<br><span>Standby</span></div>
+      <div class="env blue">BLUE<br><span>Standby</span></div>
+      <div class="env green">GREEN<br><span>Active</span></div>
     </div>
 
-  </section>
+  </main>
 
   <footer>
-    <p>© 2026 DevOps Project | CI/CD with GitHub Actions</p>
+    <p>DevOps Project | CI/CD with Docker, Docker Compose and Blue-Green Deployment</p>
   </footer>
 
 </body>
