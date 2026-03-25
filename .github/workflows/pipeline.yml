@@ -1,4 +1,4 @@
-name: CI/CD Blue-Green with Production
+name: CI/CD Blue-Green + Production Pipeline
 
 on:
   push:
@@ -45,13 +45,13 @@ jobs:
         run: docker push ${{ secrets.DOCKER_USERNAME }}/ci-cd-node:latest
 
 
-  # 🔹 3. STAGING (BLUE-GREEN AUTO DEPLOY)
-  staging:
+  # 🔹 3. DEPLOY BLUE
+  deploy-blue:
     needs: docker
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to EC2 (Blue-Green Staging)
+      - name: Deploy Blue Environment
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -62,29 +62,42 @@ jobs:
 
             docker pull $IMAGE
 
-            if docker ps | grep -q blue-app; then
-              echo "Blue running → Deploy Green (staging)"
+            docker stop blue-app || true
+            docker rm blue-app || true
 
-              docker stop green-app || true
-              docker rm green-app || true
-              docker run -d -p 3002:3000 --name green-app $IMAGE
+            docker run -d -p 3001:3000 --name blue-app $IMAGE
 
-              echo "Staging (Green) → http://<EC2-IP>:3002"
-
-            else
-              echo "Green running → Deploy Blue (staging)"
-
-              docker stop blue-app || true
-              docker rm blue-app || true
-              docker run -d -p 3001:3000 --name blue-app $IMAGE
-
-              echo "Staging (Blue) → http://<EC2-IP>:3001"
-            fi
+            echo "Blue deployed → http://<EC2-IP>:3001"
 
 
-  # 🔹 4. PRODUCTION (MANUAL APPROVAL)
+  # 🔹 4. DEPLOY GREEN
+  deploy-green:
+    needs: deploy-blue
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy Green Environment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            IMAGE=${{ secrets.DOCKER_USERNAME }}/ci-cd-node:latest
+
+            docker pull $IMAGE
+
+            docker stop green-app || true
+            docker rm green-app || true
+
+            docker run -d -p 3002:3000 --name green-app $IMAGE
+
+            echo "Green deployed → http://<EC2-IP>:3002"
+
+
+  # 🔹 5. PRODUCTION (MANUAL APPROVAL REQUIRED)
   production:
-    needs: staging
+    needs: deploy-green
     runs-on: ubuntu-latest
 
     environment:
@@ -102,10 +115,9 @@ jobs:
 
             docker pull $IMAGE
 
-            echo "Deploying to Production..."
-
             docker stop prod-app || true
             docker rm prod-app || true
+
             docker run -d -p 3000:3000 --name prod-app $IMAGE
 
             echo "Production → http://<EC2-IP>:3000"
