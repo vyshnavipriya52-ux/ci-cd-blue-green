@@ -1,4 +1,4 @@
-name: CI/CD Blue-Green + Production Pipeline
+name: CI/CD with Docker Compose + Blue-Green + Production
 
 on:
   push:
@@ -45,59 +45,39 @@ jobs:
         run: docker push ${{ secrets.DOCKER_USERNAME }}/ci-cd-node:latest
 
 
-  # 🔹 3. DEPLOY BLUE
-  deploy-blue:
+  # 🔹 3. STAGING (DOCKER COMPOSE: BLUE + GREEN)
+  staging:
     needs: docker
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy Blue Environment
+      - name: Deploy to EC2 using Docker Compose
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            cd ~/ci-cd-node
+
             IMAGE=${{ secrets.DOCKER_USERNAME }}/ci-cd-node:latest
 
+            echo "Pull latest image"
             docker pull $IMAGE
 
-            docker stop blue-app || true
-            docker rm blue-app || true
+            echo "Stop old containers"
+            docker compose down || true
 
-            docker run -d -p 3001:3000 --name blue-app $IMAGE
+            echo "Start Blue & Green"
+            docker compose up -d
 
-            echo "Blue deployed → http://<EC2-IP>:3001"
-
-
-  # 🔹 4. DEPLOY GREEN
-  deploy-green:
-    needs: deploy-blue
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Deploy Green Environment
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            IMAGE=${{ secrets.DOCKER_USERNAME }}/ci-cd-node:latest
-
-            docker pull $IMAGE
-
-            docker stop green-app || true
-            docker rm green-app || true
-
-            docker run -d -p 3002:3000 --name green-app $IMAGE
-
-            echo "Green deployed → http://<EC2-IP>:3002"
+            echo "Blue → http://<EC2-IP>:3001"
+            echo "Green → http://<EC2-IP>:3002"
 
 
-  # 🔹 5. PRODUCTION (MANUAL APPROVAL REQUIRED)
+  # 🔹 4. PRODUCTION (MANUAL APPROVAL)
   production:
-    needs: deploy-green
+    needs: staging
     runs-on: ubuntu-latest
 
     environment:
@@ -113,11 +93,14 @@ jobs:
           script: |
             IMAGE=${{ secrets.DOCKER_USERNAME }}/ci-cd-node:latest
 
+            echo "Pull latest image"
             docker pull $IMAGE
 
+            echo "Stop old production container"
             docker stop prod-app || true
             docker rm prod-app || true
 
+            echo "Run new production container"
             docker run -d -p 3000:3000 --name prod-app $IMAGE
 
             echo "Production → http://<EC2-IP>:3000"
