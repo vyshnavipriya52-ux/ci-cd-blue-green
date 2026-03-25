@@ -1,4 +1,4 @@
-name: CI/CD Blue-Green Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
 
 jobs:
 
-# 🔹 1. BUILD & TEST
+  # 🔹 1. BUILD & TEST
   build-test:
     runs-on: ubuntu-latest
 
@@ -25,7 +25,8 @@ jobs:
       - name: Run Tests
         run: npm test
 
-# 🔹 2. BUILD & PUSH DOCKER IMAGE
+
+  # 🔹 2. BUILD & PUSH DOCKER IMAGE
   docker:
     needs: build-test
     runs-on: ubuntu-latest
@@ -34,67 +35,30 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Debug Secrets
-        run: echo "USERNAME=${{ secrets.DOCKER_USERNAME }}"
-
       - name: Login to DockerHub
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "vyshnavipriya" --password-stdin
 
       - name: Build Docker Image
-        run: docker buildx build --load -t ${{ secrets.DOCKER_USERNAME }}/ci-cd-node:latest .
+        run: docker build -t vyshnavipriya/ci-cd-node:latest .
 
       - name: Push Docker Image
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/ci-cd-node:latest
+        run: docker push vyshnavipriya/ci-cd-node:latest
 
-# 🔹 3. DEPLOY TO STAGING
-  deploy-staging:
+
+  # 🔹 3. DEPLOY TO EC2
+  deploy:
     needs: docker
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to EC2 (Staging)
+      - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            docker pull ${{ secrets.DOCKER_USERNAME }}/ci-cd-node:latest
-            docker-compose up -d staging
-
-# 🔹 4. DEPLOY TO GREEN (NEW VERSION)
-  deploy-green:
-    needs: deploy-staging
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Deploy Green Environment
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            docker pull ${{ secrets.DOCKER_USERNAME }}/ci-cd-node:latest
-            docker-compose up -d green
-
-# 🔹 5. SWITCH TO PRODUCTION (MANUAL APPROVAL REQUIRED)
-  switch-production:
-    needs: deploy-green
-    runs-on: ubuntu-latest
-    environment: production   # 🔥 This enables approva
-
-    steps:
-      - name: Switch Green → Blue (Production)
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            docker stop blue-app || true
-            docker rm blue-app || true
-
-            docker-compose up -d green
-
-            docker rename green-app blue-app
+            docker pull vyshnavipriya/ci-cd-node:latest
+            docker stop app || true
+            docker rm app || true
+            docker run -d -p 3000:3000 --name app vyshnavipriya/ci-cd-node:latest
