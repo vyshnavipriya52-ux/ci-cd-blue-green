@@ -1,4 +1,4 @@
-name: CI/CD with Docker Compose + Blue-Green + Production
+name: CI/CD with SonarQube + Docker + Blue-Green + Production
 
 on:
   push:
@@ -22,13 +22,50 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Run Tests
+      - name: Run Tests with Coverage
         run: npm test
 
 
-  # 🔹 2. BUILD & PUSH DOCKER IMAGE
-  docker:
+  # 🔹 2. SONARQUBE ANALYSIS
+  sonar:
     needs: build-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Tests (Coverage for Sonar)
+        run: npm test
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v2
+        with:
+          args: >
+            -Dsonar.projectKey=ci-cd-node
+            -Dsonar.sources=.
+            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+
+      # 🔥 Quality Gate Check (VERY IMPORTANT)
+      - name: SonarQube Quality Gate
+        uses: SonarSource/sonarqube-quality-gate-action@v1
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+
+  # 🔹 3. BUILD & PUSH DOCKER IMAGE
+  docker:
+    needs: sonar   # 👈 ensures deploy only if sonar passes
     runs-on: ubuntu-latest
 
     steps:
@@ -45,7 +82,7 @@ jobs:
         run: docker push ${{ secrets.DOCKER_USERNAME }}/ci-cd-node:latest
 
 
-  # 🔹 3. STAGING (DOCKER COMPOSE: BLUE + GREEN)
+  # 🔹 4. STAGING (BLUE-GREEN DEPLOYMENT)
   staging:
     needs: docker
     runs-on: ubuntu-latest
@@ -75,13 +112,13 @@ jobs:
             echo "Green → http://<EC2-IP>:3002"
 
 
-  # 🔹 4. PRODUCTION (MANUAL APPROVAL)
+  # 🔹 5. PRODUCTION (MANUAL APPROVAL)
   production:
     needs: staging
     runs-on: ubuntu-latest
 
     environment:
-      name: production   
+      name: production   # 👈 requires manual approval in GitHub
 
     steps:
       - name: Deploy to Production
